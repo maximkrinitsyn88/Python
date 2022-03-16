@@ -65,12 +65,60 @@
 #
 # Для плавного перехода к мультипоточности, код оформить в обьектном стиле, используя следующий каркас
 #
-# class <Название класса>:
-#
-#     def __init__(self, <параметры>):
-#         <сохранение параметров>
-#
-#     def run(self):
-#         <обработка данных>
 
-# TODO написать код в однопоточном/однопроцессорном стиле
+import operator
+import os
+
+
+class Volatility:
+
+    def __init__(self, dir_name):
+        self.dir_name = dir_name
+        self.files = []
+        self.secid_volatility = {}
+
+    def run(self):
+        self.open_dir()
+        self.collect_volatility()
+        self.show_volatility()
+
+    def open_dir(self):
+        directory = os.listdir(self.dir_name)
+        for file in directory:
+            filepath = os.path.join(self.dir_name, file)
+            self.files.append(filepath)
+
+    def collect_volatility(self):
+        for filename in self.files:
+            with open(filename, 'r', encoding='utf-8') as file:
+                price_list = []
+                for line in file:
+                    if "PRICE" not in line:
+                        line = line.split(',')
+                        price_list.append(line[2])
+                min_price = float(min(price_list))
+                max_price = float(max(price_list))
+                half_sum = (min_price + max_price) / 2
+                volatility = round(((max_price - min_price) / half_sum) * 100, 2)
+                volatility_dict = dict({line[0]: volatility})
+                self.secid_volatility.update(volatility_dict)
+
+    def show_volatility(self):
+        min_volatility = sorted(self.secid_volatility.items(), key=operator.itemgetter(1), reverse=False)[:3]
+        max_volatility = sorted(self.secid_volatility.items(), key=operator.itemgetter(1), reverse=True)[:3]
+        print('Максимальная волатильность:')
+        for _ in max_volatility:
+            _ = (str(_)[1:-1])
+            print('      {_}'.format(_=_))
+        print('Минимальная волатильность:')
+        for _ in min_volatility:
+            _ = (str(_)[1:-1])
+            print('      {_}'.format(_=_))
+        print('Нулевая волатильность:')
+        for key, value in self.secid_volatility.items():
+            if value == 0:
+                print('      `{key}`, {value} '.format(key=key, value=value))
+
+
+vol = Volatility(dir_name='./trades')
+vol.run()
